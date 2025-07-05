@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LULC Image Processing</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>LULC Map Generator</h1>
+        
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <label for="imageUpload" class="custom-file-upload">
+                <div>Choose Satellite Image</div>
+                <input type="file" id="imageUpload" accept="image/*">
+            </label>
+            <p class="file-name" id="fileName">No file chosen</p>
+        </div>
+
+        <button onclick="processImage()">Generate LULC Map</button>
+
+        <!-- Image Display Section -->
+        <div class="image-container">
+            <h3>Original Image:</h3>
+            <img id="originalImage" src="" alt="Original Image" style="display:none;">
+
+            <h3>LULC Map:</h3>
+            <img id="lulcImage" src="" alt="LULC Map" style="display:none;">
+        </div>
+
+        <!-- Land Usage Percentage Display -->
+        <div class="percentage-container" id="percentageContainer" style="display: none;">
+            <h2>Land Usage Statistics</h2>
+            <p><strong>Houses:</strong> <span id="housePercentage">0</span>%</p>
+            <p><strong>Natural Cover:</strong> <span id="naturalPercentage">0</span>%</p>
+            <p><strong>Remaining Land:</strong> <span id="landPercentage">0</span>%</p>
+        </div>
+    </div>
+
+    <script>
+        // Display selected file name
+        document.getElementById('imageUpload').addEventListener('change', function(event) {
+            const fileInput = event.target;
+            const fileNameDisplay = document.getElementById('fileName');
+            
+            if (fileInput.files.length > 0) {
+                fileNameDisplay.textContent = fileInput.files[0].name;
+            } else {
+                fileNameDisplay.textContent = "No file chosen";
+            }
+        });
+
+        function processImage() {
+            const fileInput = document.getElementById('imageUpload');
+            const originalImage = document.getElementById('originalImage');
+            const lulcImage = document.getElementById('lulcImage');
+            const housePercentage = document.getElementById('housePercentage');
+            const naturalPercentage = document.getElementById('naturalPercentage');
+            const remainingPercentage = document.getElementById('landPercentage');
+            const percentageContainer = document.getElementById('percentageContainer');
+
+            if (fileInput.files.length === 0) {
+                alert('Please upload an image first.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('image', file);
+
+            // Show the original image before processing
+            originalImage.src = URL.createObjectURL(file);
+            originalImage.style.display = 'block';
+
+            fetch('/process', {  // Use relative path
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                    return;
+                }
+
+                lulcImage.src = `data:image/png;base64,${data.lulc_map}`;
+                lulcImage.style.display = 'block';
+
+                // Update land usage statistics
+                housePercentage.innerText = data.house_percentage;
+                naturalPercentage.innerText = data.natural_cover_percentage;
+                remainingPercentage.innerText = data.remaining_percentage;
+
+                // Show statistics container
+                percentageContainer.style.display = 'block';
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>
